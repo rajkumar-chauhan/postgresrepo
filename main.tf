@@ -5,34 +5,20 @@ resource "aws_vpc" "ot_microservices_dev" {
     Name = "ot-micro-vpc"
   }
 }
-resource "aws_subnet" "database_subnet" {
- vpc_id            = aws_vpc.ot_microservices_dev.id
- cidr_block        = "10.0.0.64/28"
- availability_zone = "us-east-2a"
- tags = {
-   Name = "Database Subnet"
- }
-}
-resource "aws_security_group" "attendance_security_group" {
+
+resource "aws_security_group" "bastion_security_group" {
   vpc_id = aws_vpc.ot_microservices_dev.id
-  name   = "attendance-security-group"
+  name   = "bastion-security-group"
 
   tags = {
-    Name = "attendance-security-group"
+    Name = "bastion-security-group"
   }
   
   ingress {
-    from_port       = 8080
-    to_port         = 8080
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb_security_group.id]
-  }
-
-  ingress {
-    from_port       = 22
-    to_port         = 22
-    protocol        = "tcp"
-    security_groups = [aws_security_group.bastion_security_group.id]
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -42,6 +28,7 @@ resource "aws_security_group" "attendance_security_group" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
 resource "aws_security_group" "alb_security_group" {
   vpc_id = aws_vpc.ot_microservices_dev.id
   name   = "alb-security-group"
@@ -103,31 +90,6 @@ resource "aws_security_group" "employee_security_group" {
   }
 }
 
-
-resource "aws_security_group" "bastion_security_group" {
-  vpc_id = aws_vpc.ot_microservices_dev.id
-  name   = "bastion-security-group"
-
-  tags = {
-    Name = "bastion-security-group"
-  }
-  
-  ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-
 resource "aws_security_group" "salary_security_group" {
   vpc_id      = aws_vpc.ot_microservices_dev.id
   name        = "salary-security-group"
@@ -156,6 +118,36 @@ resource "aws_security_group" "salary_security_group" {
 
   tags = {
     Name = "salary-security-group"
+  }
+}
+
+resource "aws_security_group" "attendance_security_group" {
+  vpc_id = aws_vpc.ot_microservices_dev.id
+  name   = "attendance-security-group"
+
+  tags = {
+    Name = "attendance-security-group"
+  }
+  
+  ingress {
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_security_group.id]
+  }
+
+  ingress {
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [aws_security_group.bastion_security_group.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
@@ -206,56 +198,25 @@ resource "aws_security_group" "redis_security_group" {
   tags = {
     Name = "redis-security-group"
   }
-resource "aws_security_group" "postgres_security_group" {
-  vpc_id = aws_vpc.ot_microservices_dev.id
-  name = "postgres-security-group"
-
-  tags = {
-    Name = "postgres-security-group"
-  }
-  
-  ingress {
-    from_port        = 5432
-    to_port          = 5432
-    protocol         = "tcp"
-    security_groups = [aws_security_group.attendance_security_group.id]
-  }
-
-  ingress {
-    from_port        = 5432
-    to_port          = 5432
-    protocol         = "tcp"
-    security_groups = [aws_security_group.redis_security_group.id]
-  }
-
-  ingress {
-    from_port        = 22
-    to_port          = 22
-    protocol         = "tcp"
-    security_groups = [aws_security_group.bastion_security_group.id]
-  }
-
-  egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    # ipv6_cidr_blocks = ["::/0"]
-  }
 }
 
+resource "aws_subnet" "database_subnet" {
+ vpc_id            = aws_vpc.ot_microservices_dev.id
+ cidr_block        = "10.0.0.64/28"
+ availability_zone = "us-east-2a"
+ tags = {
+   Name = "Database Subnet"
+ }
+}
 
-# postgres instance
-
-resource "aws_instance" "postgres_instance" {
-  # ami to be replaced with actual ami
-  ami           = "ami-0862be96e41dcbf74"
-  subnet_id = aws_subnet.database_subnet.id
-  vpc_security_group_ids = [aws_security_group.postgres_security_group.id]
-  instance_type = "t2.micro"
-  key_name = "backendp9"
+resource "aws_instance" "Redis_instance" {
+  ami                = "ami-0862be96e41dcbf74"
+  subnet_id          = aws_subnet.database_subnet.id
+  key_name           = "backendp9"
+  vpc_security_group_ids = [ aws_security_group.redis_security_group.id ]
+  instance_type      = "t2.micro"
 
   tags = {
-    Name = "Postgres"
+    Name = "Redis"
   }
 }
